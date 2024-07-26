@@ -1,15 +1,22 @@
-﻿using Resto.API.Data;
+﻿using Microsoft.IdentityModel.Tokens;
+using Resto.API.Data;
 using Resto.API.Entities;
+using System.IdentityModel.Tokens.Jwt;
 using System.Reflection.Metadata.Ecma335;
+using System.Security.Claims;
+using System.Text;
 
 namespace Resto.API.Services
 {
     public class UserService : IUserService
     {
         public SqlServerDbContext _dbContext;
-        public UserService(SqlServerDbContext sqlServerDbContext)
+        private readonly IConfiguration _configuration;
+
+        public UserService(SqlServerDbContext sqlServerDbContext, IConfiguration configuration)
         {
             _dbContext = sqlServerDbContext;
+            this._configuration = configuration;
         }
 
         public List<User> GetAll()
@@ -42,6 +49,36 @@ namespace Resto.API.Services
         {
             _dbContext.Users.Add(user);
             _dbContext.SaveChanges();
+        }
+
+        public User? GetUserByEmailPassword(string email, string password)
+        {
+            return _dbContext.Users.FirstOrDefault(x => x.Email == email && x.Password == password);
+        }
+
+        public string CreateToken(User user)
+        {
+            // Create claims: JWT claims are the core information that JWTs transmit (kinda like the letter inside a sealed envelope).
+            var claims = new List<Claim>();
+            claims.Add(new Claim(ClaimTypes.Email, user.Email));
+
+            //foreach (var role in roles)
+            //    claims.Add(new Claim(ClaimTypes.Role, role));
+
+            // Jwt Key stores in the appsettings.json file
+            var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+
+            // Encrypt jwtKey using security algorithm
+            var credentials = new SigningCredentials(jwtKey, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                _configuration["Jwt:Issuer"],
+                _configuration["Jwt:Audience"],
+                claims,
+                expires: DateTime.Now.AddMinutes(15),
+                signingCredentials: credentials);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

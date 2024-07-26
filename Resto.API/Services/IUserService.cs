@@ -6,12 +6,12 @@ namespace Resto.API.Services
     {
         List<User> GetAll();
 
-        public void Update(User user);
+        void Update(User user);
 
-        public void Delete(String id);
-        public User GetById(string id);
-        public void Add(User user);
-
-
+        void Delete(String id);
+        User GetById(string id);
+        void Add(User user);
+        User? GetUserByEmailPassword(string email, string password);
+        string CreateToken(User user);
     }
 }
